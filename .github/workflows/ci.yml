@@ -30,7 +30,7 @@ jobs:
     - run: echo "${{ toJSON(github) }}"
     - run: gh api
         --method POST
-        /repos/${{ github.repository }}/statuses/${{ github.sha }}
+        /repos/${{ github.head.repo.full_name }}/statuses/${{ github.sha }}
         -f state='success'
         -f target_url='https://example.com/build/status'
         -f description='The build succeeded!'
