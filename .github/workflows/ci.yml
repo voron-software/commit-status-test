@@ -31,3 +31,5 @@ jobs:
         -f target_url='https://example.com/build/status'
         -f description='The build succeeded!'
         -f context='continuous-integration/jenkins'
+      env:
+        GH_TOKEN: ${{ github.token }}
