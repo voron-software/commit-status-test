@@ -1,0 +1,89 @@
+name: Commit Status
+
+on:
+  workflow_run:
+    workflows: ["Test Coverage"]
+    types:
+      - completed
+
+permissions:
+  statuses: write
+  actions: read
+
+jobs:
+  update-status:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    steps:
+      - name: Download coverage artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: coverage-data
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: ${{ github.event.workflow_run.id }}
+
+      - name: Download PR metadata
+        uses: actions/download-artifact@v4
+        with:
+          name: pr-metadata
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: ${{ github.event.workflow_run.id }}
+
+      - name: Extract coverage percentage and PR SHA
+        id: coverage
+        run: |
+          COVERAGE=$(grep total coverage.txt | awk '{print $3}')
+          echo "percentage=$COVERAGE" >> $GITHUB_OUTPUT
+          echo "Coverage: $COVERAGE"
+
+          PR_SHA=$(cat pr_sha.txt)
+          echo "sha=$PR_SHA" >> $GITHUB_OUTPUT
+          echo "PR SHA: $PR_SHA"
+
+      - name: Set commit status
+        run: |
+          gh api \
+            --method POST \
+            /repos/${{ github.repository }}/statuses/${{ steps.coverage.outputs.sha }} \
+            -f state='success' \
+            -f target_url='${{ github.event.workflow_run.html_url }}' \
+            -f description='Coverage: ${{ steps.coverage.outputs.percentage }}' \
+            -f context='coverage/report'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  update-status-failure:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'failure' }}
+    steps:
+      - name: Download PR metadata
+        uses: actions/download-artifact@v4
+        with:
+          name: pr-metadata
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: ${{ github.event.workflow_run.id }}
+        continue-on-error: true
+
+      - name: Extract PR SHA
+        id: pr
+        run: |
+          if [ -f pr_sha.txt ]; then
+            PR_SHA=$(cat pr_sha.txt)
+            echo "sha=$PR_SHA" >> $GITHUB_OUTPUT
+            echo "PR SHA: $PR_SHA"
+          else
+            echo "sha=${{ github.event.workflow_run.head_sha }}" >> $GITHUB_OUTPUT
+            echo "Using workflow head SHA"
+          fi
+
+      - name: Set commit status to failure
+        run: |
+          gh api \
+            --method POST \
+            /repos/${{ github.repository }}/statuses/${{ steps.pr.outputs.sha }} \
+            -f state='failure' \
+            -f target_url='${{ github.event.workflow_run.html_url }}' \
+            -f description='Tests failed' \
+            -f context='coverage/report'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
