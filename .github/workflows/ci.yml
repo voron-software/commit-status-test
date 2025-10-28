@@ -24,10 +24,10 @@ jobs:
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
     - run: echo "${{ toJSON(github) }}"
-    - run: gh api \
-        --method POST \
-        /repos/${{ github.repository }}/statuses/${{ github.sha }} \
-        -f state='success' \
-        -f target_url='https://example.com/build/status' \
-        -f description='The build succeeded!' \
+    - run: gh api
+        --method POST
+        /repos/${{ github.repository }}/statuses/${{ github.sha }}
+        -f state='success'
+        -f target_url='https://example.com/build/status'
+        -f description='The build succeeded!'
         -f context='continuous-integration/jenkins'
