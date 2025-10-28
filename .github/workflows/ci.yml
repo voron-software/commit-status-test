@@ -26,7 +26,6 @@ jobs:
     - run: echo "${{ github }}"
     - run: gh api \
         --method POST \
-        -H "Accept: application/vnd.github+json" \
         /repos/${{ github.repository }}/statuses/${{ github.sha }} \
         -f state='success' \
         -f target_url='https://example.com/build/status' \
